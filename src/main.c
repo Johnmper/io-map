@@ -1,11 +1,16 @@
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_WIN32)
+   #include <windows.h>
+#endif
+
+
 #include "iomap.h"
+
+
 
 struct full_date
 {
@@ -21,8 +26,11 @@ struct user_data
    char name[101];   // 101 bytes
 }; // 112 bytes long (padding)
 
+
+
 int main( int argc, const char *argv[] )
 {
+   
    struct user_data user;
 
    if( argc != 3 )
