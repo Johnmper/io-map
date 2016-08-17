@@ -44,7 +44,6 @@ int main( int argc, const char *argv[] )
    }
    else if( argc == 3 && (strcmp( "-o", argv[1] ) == 0) )
    {
-      fprintf(stderr,"HERE\n");
       user.id = 1001334;
       user.birthday.day = 13;
       user.birthday.month = 13;
@@ -66,7 +65,6 @@ int main( int argc, const char *argv[] )
    }
    else if( argc == 3 && (strcmp( "-i", argv[1]) == 0) )
    {
-      fprintf(stderr,"HERE2\n");
       imap( &(user), sizeof(struct user_data), argv[2] );
 
       fprintf(stdout,"Name: %s\n"

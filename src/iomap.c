@@ -204,6 +204,8 @@ void imap( void *data, size_t data_size, const char * filename )
 
 }
 
+
+
 void omap( const void *data, size_t data_size, const char * filename )
 {
    LPVOID mapped_data;
@@ -281,8 +283,6 @@ void omap( const void *data, size_t data_size, const char * filename )
 
 
 }
-
-
 
 #else
    #error "Current OS not supported."
