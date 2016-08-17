@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #if defined(_WIN32)
    #include <windows.h>
@@ -30,8 +31,9 @@ struct user_data
 
 int main( int argc, const char *argv[] )
 {
-   
+
    struct user_data user;
+
 
    if( argc != 3 )
    {

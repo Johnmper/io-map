@@ -1,7 +1,7 @@
 #include "iomap.h"
 
 
-//# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+//# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 //#                                             ##
 //##    ####   #####   #####   ##      ######   ##   ##      ######  ##  ##  ##  ##  ##  ##
 //##   ##  ##  ##  ##  ##  ##  ##      ##       ##   ##        ##    ### ##  ##  ##   ####
@@ -9,7 +9,7 @@
 //##   ##  ##  ##      ##      ##      ##       ##   ##        ##    ##  ##  ##  ##   ####
 //##   ##  ##  ##      ##      ######  ######   ##   ######  ######  ##  ##   ####   ##  ##
 //#                                             ##
-//# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+//# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #if defined(__linux__) || defined(__APPLE__)
 
 
@@ -46,13 +46,7 @@ void imap( void *data, size_t data_size, const char * filename )
       exit(EXIT_FAILURE);
    }
 
-   if( file_stats.st_size > data_size )
-   {
-      perror("File size bigger than object size.\n\t");
-      exit(EXIT_FAILURE);
-   }
-
-   data_tmp = mmap( (caddr_t)0, file_stats.st_size, PROT_WRITE | PROT_READ, MAP_PRIVATE, fd, 0 );
+   data_tmp = mmap( (caddr_t)0, file_stats.st_size, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0 );
    if( data_tmp == (caddr_t)(-1) )
    {
       perror("Failed to map file into memory.\n\t");
@@ -61,14 +55,6 @@ void imap( void *data, size_t data_size, const char * filename )
    }
 
    memcpy( data, data_tmp, data_size );
-
-   // Check error in copy
-   if( memcmp( data, data_tmp, data_size ) != 0 )
-   {
-      perror("Failed to memory copy.\n\t");
-      close(fd);
-      exit(EXIT_FAILURE);
-   }
 
    if( munmap( (caddr_t)data_tmp, data_size ) < 0 )
    {
@@ -86,14 +72,12 @@ void omap( const void *data, size_t data_size, const char * filename )
    int fd, file_end;
    void * data_tmp;
 
-
    fd = open( filename, O_RDWR | O_CREAT, 0666 );
    if( fd < 0 )
    {
       perror("Failed to open file.\n\t");
       exit(EXIT_FAILURE);
    }
-
 
    file_end = lseek( fd, data_size-1, SEEK_SET );
    write( fd, "", 1);   // '\0' writed to end of file (changes file size)
@@ -104,7 +88,6 @@ void omap( const void *data, size_t data_size, const char * filename )
       exit(EXIT_FAILURE);
    }
 
-
    data_tmp = mmap( (caddr_t)0, data_size, PROT_WRITE | PROT_READ, MAP_SHARED, fd, 0 );
    if( data_tmp == (caddr_t)(-1) )
    {
@@ -113,18 +96,7 @@ void omap( const void *data, size_t data_size, const char * filename )
       exit(EXIT_FAILURE);
    }
 
-
    memcpy( data_tmp, data, data_size );
-
-
-   // Check error in copy
-   if( memcmp( data, data_tmp, data_size ) != 0)
-   {
-      perror("Failed to copy mapped memory.\n\t");
-      close(fd);
-      exit(EXIT_FAILURE);
-   }
-
 
    if( munmap( (caddr_t)data_tmp, data_size ) < 0 )
    {
@@ -141,7 +113,7 @@ void omap( const void *data, size_t data_size, const char * filename )
 
 
 
-//# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+//# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 //#
 //##    ##   ##  ######  ##  ##  #####    ####   ##   ##   ####
 //##    ##   ##    ##    ### ##  ##  ##  ##  ##  ##   ##  ##
@@ -149,30 +121,166 @@ void omap( const void *data, size_t data_size, const char * filename )
 //##    #######    ##    ##  ##  ##  ##  ##  ##  #######      ##
 //##     ## ##   ######  ##  ##  #####    ####    ## ##    ####
 //#
-//# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+//# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #elif defined(_WIN32)
 
 #include <windows.h>
 #include <direct.h>
-
+#include <tchar.h>
 
 // Note:
 //    mmap() is a posix function, works on Linux, MacOS X, HP-UX, AIX, and Solaris.
 //
 //    Alternative for windows: MapViewOfFile().
 
+
+// Todo:
+//    add FormatMessage() support for error handling.
+
 void imap( void *data, size_t data_size, const char * filename )
 {
-   
+   BOOL error_flag;
+   LPVOID mapped_data;
+   HANDLE hfile, hmap;
+   DWORD file_size;
+
+
+   hfile = CreateFile(filename,
+                     GENERIC_READ | GENERIC_WRITE,
+                     FILE_SHARE_READ | FILE_SHARE_WRITE,
+                     NULL,
+                     OPEN_EXISTING,
+                     FILE_ATTRIBUTE_NORMAL,
+                     FILE_FLAG_SEQUENTIAL_SCAN);
+   if( hfile == INVALID_HANDLE_VALUE)
+   {
+      _tprintf( TEXT("Failed to open file.\n") );
+      exit(EXIT_FAILURE);
+   }
+
+   hmap = CreateFileMapping(hfile,
+                           NULL,
+                           PAGE_READWRITE,
+                           0,
+                           file_size,
+                           NULL);
+   if( hmap == NULL )
+   {
+      _tprintf( TEXT("File creation for mapping failed.\n") );
+      exit(EXIT_FAILURE);
+   }
+
+   data_mapped = MapViewOfFile(hmap,
+                              FILE_MAP_ALL_ACCESS,
+                              0,
+                              0,
+                              data_size);
+   if( data_mapped == NULL )
+   {
+      _tprintf( TEXT("Mapping of view file failed.\n") );
+      exit(EXIT_FAILURE);
+   }
+
+   memcpy( data_mapped, data, data_size );
+
+   if( !UnmapViewOfFile( data_mapped ) )
+   {
+      _tprintf( TEXT("Unmapping of view file failed.\n") );
+      exit(EXIT_FAILURE);
+   }
+
+   if( !CloseHandle( hmap ) )
+   {
+      _tprintf( TEXT("Closing mapping object.\n") );
+      exit(EXIT_FAILURE);
+   }
+
+   if( !CloseHandle( hfile ) )
+   {
+      _tprintf( TEXT("Closing file handle.\n") );
+      exit(EXIT_FAILURE);
+   }
+
 }
 
 void omap( const void *data, size_t data_size, const char * filename )
 {
-   
+   BOOL error_flag;
+   LPVOID mapped_data;
+   HANDLE hfile, hmap;
+   DWORD file_end, bytes_written;
+
+   hfile = CreateFile(filename,
+                     GENERIC_READ | GENERIC_WRITE,
+                     FILE_SHARE_READ | FILE_SHARE_WRITE,
+                     NULL,
+                     CREATE_ALWAYS,
+                     FILE_ATTRIBUTE_NORMAL,
+                     FILE_FLAG_SEQUENTIAL_SCAN);
+   if( hfile == INVALID_HANDLE_VALUE)
+   {
+      _tprintf( TEXT("Failed to open file.\n") );
+      exit(EXIT_FAILURE);
+   }
+
+   file_end = SetFilePointer( hfile,
+                              data_size-1,
+                              NULL,
+                              FILE_BEGIN);
+   if( file_end == INVALID_SET_POINTER )
+   {
+      _tprintf( TEXT("Failed tochange file size.\n") );
+      CloseHandle(hfile);
+      exit(EXIT_FAILURE);
+   }
+
+   WriteFile(hfile, "", 1, &bytes_written, NULL );
+
+   hmap = CreateFileMapping(hfile,
+                           NULL,
+                           PAGE_READWRITE,
+                           0,
+                           data_size,
+                           NULL);
+   if( hmap == NULL )
+   {
+      _tprintf( TEXT("File creation for mapping failed.\n") );
+      exit(EXIT_FAILURE);
+   }
+
+   data_mapped = MapViewOfFile(hmap,
+                              FILE_MAP_ALL_ACCESS,
+                              0,
+                              0,
+                              data_size);
+   if( data_mapped == NULL )
+   {
+      _tprintf( TEXT("Mapping of view file failed.\n") );
+      exit(EXIT_FAILURE);
+   }
+
+   memcpy( data_mapped, data, data_size );
+
+   if( !UnmapViewOfFile( data_mapped ) )
+   {
+      _tprintf( TEXT("Unmapping of view file failed.\n") );
+      exit(EXIT_FAILURE);
+   }
+
+   if( !CloseHandle( hmap ) )
+   {
+      _tprintf( TEXT("Closing mapping object.\n") );
+      exit(EXIT_FAILURE);
+   }
+
+   if( !CloseHandle( hfile ) )
+   {
+      _tprintf( TEXT("Closing file handle.\n") );
+      exit(EXIT_FAILURE);
+   }
+
+
 }
-
-
-
 
 
 
