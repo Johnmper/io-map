@@ -150,8 +150,8 @@ void imap( void *data, size_t data_size, const char * filename )
                      FILE_SHARE_READ | FILE_SHARE_WRITE,
                      NULL,
                      OPEN_EXISTING,
-                     FILE_ATTRIBUTE_NORMAL,
-                     FILE_FLAG_SEQUENTIAL_SCAN);
+                     FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                     NULL);
    if( hfile == INVALID_HANDLE_VALUE)
    {
       _tprintf( TEXT("Failed to open file.\n") );
@@ -170,18 +170,18 @@ void imap( void *data, size_t data_size, const char * filename )
       exit(EXIT_FAILURE);
    }
 
-   data_mapped = MapViewOfFile(hmap,
+   mapped_data = MapViewOfFile(hmap,
                               FILE_MAP_ALL_ACCESS,
                               0,
                               0,
                               data_size);
-   if( data_mapped == NULL )
+   if( mapped_data == NULL )
    {
       _tprintf( TEXT("Mapping of view file failed.\n") );
       exit(EXIT_FAILURE);
    }
 
-   memcpy( data_mapped, data, data_size );
+   memcpy( mapped_data, data, data_size );
 
    if( !UnmapViewOfFile( data_mapped ) )
    {
@@ -248,18 +248,18 @@ void omap( const void *data, size_t data_size, const char * filename )
       exit(EXIT_FAILURE);
    }
 
-   data_mapped = MapViewOfFile(hmap,
+   mapped_data = MapViewOfFile(hmap,
                               FILE_MAP_ALL_ACCESS,
                               0,
                               0,
                               data_size);
-   if( data_mapped == NULL )
+   if( mapped_data == NULL )
    {
       _tprintf( TEXT("Mapping of view file failed.\n") );
       exit(EXIT_FAILURE);
    }
 
-   memcpy( data_mapped, data, data_size );
+   memcpy( mapped_data, data, data_size );
 
    if( !UnmapViewOfFile( data_mapped ) )
    {
