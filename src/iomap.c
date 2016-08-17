@@ -139,7 +139,6 @@ void omap( const void *data, size_t data_size, const char * filename )
 
 void imap( void *data, size_t data_size, const char * filename )
 {
-   BOOL error_flag;
    LPVOID mapped_data;
    HANDLE hfile, hmap;
    DWORD file_size;
@@ -158,8 +157,10 @@ void imap( void *data, size_t data_size, const char * filename )
       exit(EXIT_FAILURE);
    }
 
+   file_size = GetFileSize( hfile, NULL );
+
    hmap = CreateFileMapping(hfile,
-                           NULL,
+                             NULL,
                            PAGE_READWRITE,
                            0,
                            file_size,
@@ -181,9 +182,9 @@ void imap( void *data, size_t data_size, const char * filename )
       exit(EXIT_FAILURE);
    }
 
-   memcpy( mapped_data, data, data_size );
+   memcpy( data, mapped_data, data_size );
 
-   if( !UnmapViewOfFile( data_mapped ) )
+   if( !UnmapViewOfFile( mapped_data ) )
    {
       _tprintf( TEXT("Unmapping of view file failed.\n") );
       exit(EXIT_FAILURE);
@@ -205,7 +206,6 @@ void imap( void *data, size_t data_size, const char * filename )
 
 void omap( const void *data, size_t data_size, const char * filename )
 {
-   BOOL error_flag;
    LPVOID mapped_data;
    HANDLE hfile, hmap;
    DWORD file_end, bytes_written;
@@ -215,8 +215,8 @@ void omap( const void *data, size_t data_size, const char * filename )
                      FILE_SHARE_READ | FILE_SHARE_WRITE,
                      NULL,
                      CREATE_ALWAYS,
-                     FILE_ATTRIBUTE_NORMAL,
-                     FILE_FLAG_SEQUENTIAL_SCAN);
+                     FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                     NULL);
    if( hfile == INVALID_HANDLE_VALUE)
    {
       _tprintf( TEXT("Failed to open file.\n") );
@@ -227,7 +227,7 @@ void omap( const void *data, size_t data_size, const char * filename )
                               data_size-1,
                               NULL,
                               FILE_BEGIN);
-   if( file_end == INVALID_SET_POINTER )
+   if( file_end == INVALID_SET_FILE_POINTER )
    {
       _tprintf( TEXT("Failed tochange file size.\n") );
       CloseHandle(hfile);
@@ -261,7 +261,7 @@ void omap( const void *data, size_t data_size, const char * filename )
 
    memcpy( mapped_data, data, data_size );
 
-   if( !UnmapViewOfFile( data_mapped ) )
+   if( !UnmapViewOfFile( mapped_data ) )
    {
       _tprintf( TEXT("Unmapping of view file failed.\n") );
       exit(EXIT_FAILURE);

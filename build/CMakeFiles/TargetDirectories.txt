@@ -1,3 +1,0 @@
-/Users/johnmper/Documents/xdev/io-mmap/build/CMakeFiles/edit_cache.dir
-/Users/johnmper/Documents/xdev/io-mmap/build/CMakeFiles/rebuild_cache.dir
-/Users/johnmper/Documents/xdev/io-mmap/build/CMakeFiles/iomap.dir
